@@ -47,6 +47,17 @@ services:
       DD_SECRET_KEY: "${DD_SECRET_KEY:-hhZCp@D28z!n@NED*yB!ROMt+WzsY*iq}"
       DD_CREDENTIAL_AES_256_KEY: "${DD_CREDENTIAL_AES_256_KEY:-&91a*agLqesc*0DJ+2*bAbsUZfR*4nLw}"
       DD_DATABASE_READINESS_TIMEOUT: "${DD_DATABASE_READINESS_TIMEOUT:-30}"
+      DD_LDAP_ENABLED: False
+      DD_LDAP_SERVER_URI: ldap://ldap-server:389
+      DD_LDAP_BIND_DN: cn=admin,dc=example,dc=com
+      DD_LDAP_BIND_PASSWORD: "${DD_LDAP_BIND_PASSWORD:-changeme}"
+      DD_LDAP_USER_SEARCH_BASE: ou=Users,dc=example,dc=com
+      DD_LDAP_GROUP_SEARCH_BASE: ou=Groups,dc=example,dc=com
+      # DD_LDAP_REQUIRE_GROUP: cn=app-users,ou=Groups,dc=example,dc=com
+      DD_LDAP_GROUP_FLAG_ENABLED: False
+      DD_LDAP_GROUP_FLAG_IS_ACTIVE_USER_GROUP: cn=active-users,ou=Groups,dc=example,dc=com
+      DD_LDAP_GROUP_FLAG_IS_STAFF_USER_GROUP: cn=staff,ou=Groups,dc=example,dc=com
+      DD_LDAP_GROUP_FLAG_IS_SUPERUSER_GROUP: cn=admins,ou=Groups,dc=example,dc=com
     volumes:
         - type: bind
           source: ./docker/extra_settings
@@ -117,6 +128,7 @@ services:
     image: redis:7.2.8-alpine@sha256:c88ea2979a49ca497bbf7d39241b237f86c98e58cb2f6b1bc2dd167621f819bb
     volumes:
       - defectdojo_redis:/data
+
 volumes:
   defectdojo_postgres: {}
   defectdojo_media: {}

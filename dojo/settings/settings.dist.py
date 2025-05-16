@@ -17,6 +17,8 @@ from pathlib import Path
 import environ
 from celery.schedules import crontab
 from netaddr import IPNetwork, IPSet
+import ldap
+from django_auth_ldap.config import LDAPSearch, GroupOfNamesType
 
 from dojo import __version__
 
@@ -321,6 +323,52 @@ env = environ.FileAwareEnv(
     # For HTTP requests, how long connection is open before timeout
     # This settings apply only on requests performed by "requests" lib used in Dojo code (if some included lib is using "requests" as well, this does not apply there)
     DD_REQUESTS_TIMEOUT=(int, 30),
+    # === LDAP ===
+    # Flag to enable or disable LDAP authentication.
+    # Set to True to enable LDAP authentication; set to False to disable it.
+    DD_LDAP_ENABLED=(bool, False),
+
+    # URI for the LDAP server to connect to.
+    # Format: 'ldap://hostname:port'. Example: 'ldap://your-ldap-server:389'.
+    DD_LDAP_SERVER_URI=(str, None),
+
+    # Distinguished Name (DN) used for binding to the LDAP server.
+    # This should be the DN of a service account with directory search permissions.
+    # Example: 'cn=admin,dc=example,dc=com'.
+    DD_LDAP_BIND_DN=(str, None),
+
+    # Password for the bind DN account.
+    # Required to authenticate the bind DN to the LDAP server.
+    DD_LDAP_BIND_PASSWORD=(str, None),
+
+    # Base DN for user search operations in the LDAP directory.
+    # Defines the scope of user searches. Example: 'ou=Users,dc=example,dc=com'.
+    DD_LDAP_USER_SEARCH_BASE=(str, None),
+
+    # Base DN for group search operations in the LDAP directory.
+    # Defines the scope of group searches. Example: 'ou=Groups,dc=example,dc=com'.
+    DD_LDAP_GROUP_SEARCH_BASE=(str, None),
+
+    # Optional DN of a group whose members are required for login access.
+    # If specified, users must be members of this group to log in.
+    # Example: 'cn=requiredgroup,ou=Groups,dc=example,dc=com'. Leave empty if no group membership is required.
+    DD_LDAP_REQUIRE_GROUP=(str, None),
+
+    # Enables group-based flagging for user roles such as active, staff, or superuser.
+    # Set to True to use group membership for determining user roles.
+    DD_LDAP_GROUP_FLAG_ENABLED=(bool, False),
+
+    # DN of the LDAP group whose members are considered active users.
+    # Example: 'cn=activeusers,ou=Groups,dc=example,dc=com'.
+    DD_LDAP_GROUP_FLAG_IS_ACTIVE_USER_GROUP=(str, None),
+
+    # DN of the LDAP group whose members are granted staff status.
+    # Example: 'cn=staffusers,ou=Groups,dc=example,dc=com'.
+    DD_LDAP_GROUP_FLAG_IS_STAFF_USER_GROUP=(str, None),
+
+    # DN of the LDAP group whose members are granted superuser status.
+    # Example: 'cn=superusers,ou=Groups,dc=example,dc=com'.
+    DD_LDAP_GROUP_FLAG_IS_SUPERUSER_GROUP=(str, None),
 )
 
 
@@ -1089,6 +1137,57 @@ if SAML2_ENABLED:
         },
         "valid_for": 24,  # how long is our metadata valid
     }
+
+
+# Check if LDAP authentication is enabled based on environment configuration.
+if ldap_enabled := env("DD_LDAP_ENABLED", default=False):
+
+    # LDAP server configuration parameters.
+    AUTH_LDAP_SERVER_URI = env('DD_LDAP_SERVER_URI')
+    AUTH_LDAP_BIND_DN = env('DD_LDAP_BIND_DN')
+    AUTH_LDAP_BIND_PASSWORD = env('DD_LDAP_BIND_PASSWORD')
+
+    # Mapping of LDAP attributes to user model fields.
+    AUTH_LDAP_USER_ATTR_MAP = {
+        "first_name": "givenName",
+        "last_name": "sn",
+        "email": "mail",
+    }
+
+    # Configuration for searching users in the LDAP directory.
+    AUTH_LDAP_USER_SEARCH = LDAPSearch(
+        env('DD_LDAP_USER_SEARCH_BASE'),
+        ldap.SCOPE_SUBTREE, "(uid=%(user)s)"
+    )
+
+    # Configuration for searching groups in the LDAP directory.
+    AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
+        env('DD_LDAP_GROUP_SEARCH_BASE'),
+        ldap.SCOPE_SUBTREE, "(objectClass=groupOfNames)"
+    )
+
+    # Specifies the type of LDAP group.
+    AUTH_LDAP_GROUP_TYPE = GroupOfNamesType(name_attr="cn")
+
+    # Optional: Require membership in a specific LDAP group for authentication.
+    if required_group := env('DD_LDAP_REQUIRE_GROUP', default=None):
+        AUTH_LDAP_REQUIRE_GROUP = required_group
+
+    # Enable group-based flagging for user roles (active, staff, superuser) if configured.
+    if group_flag_enabled := env('DD_LDAP_GROUP_FLAG_ENABLED', default=False):
+        AUTH_LDAP_USER_FLAGS_BY_GROUP = {
+            "is_active": env('DD_LDAP_GROUP_FLAG_IS_ACTIVE_USER_GROUP'),
+            "is_staff": env('DD_LDAP_GROUP_FLAG_IS_STAFF_USER_GROUP'),
+            "is_superuser": env('DD_LDAP_GROUP_FLAG_IS_SUPERUSER_GROUP'),
+        }
+
+    # Define authentication backends to be used for user authentication.
+    AUTHENTICATION_BACKENDS = (
+        'django_auth_ldap.backend.LDAPBackend',
+        'django.contrib.auth.backends.RemoteUserBackend',
+        'django.contrib.auth.backends.ModelBackend',
+    )
+
 
 # ------------------------------------------------------------------------------
 # REMOTE_USER

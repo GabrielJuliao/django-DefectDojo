@@ -24,6 +24,9 @@ RUN \
     libffi-dev \
     python3-dev \
     libpq-dev \
+    libldap2-dev \
+    libsasl2-dev \
+    ldap-utils \
     && \
     rm -rf /var/cache/apk/* && \
   true
