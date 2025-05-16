@@ -18,9 +18,6 @@ import environ
 from celery.schedules import crontab
 from netaddr import IPNetwork, IPSet
 
-import ldap
-from django_auth_ldap.config import LDAPSearch, GroupOfNamesType
-
 from dojo import __version__
 
 logger = logging.getLogger(__name__)
@@ -324,45 +321,8 @@ env = environ.FileAwareEnv(
     # For HTTP requests, how long connection is open before timeout
     # This settings apply only on requests performed by "requests" lib used in Dojo code (if some included lib is using "requests" as well, this does not apply there)
     DD_REQUESTS_TIMEOUT=(int, 30),
-    # LDAP
-    DD_LDAP_SERVER_URI=(str, 'ldap://ldap:389'),
-    DD_LDAP_BIND_DN=(str, 'cn=admin,dc=softwarefactory,dc=com'),
-    DD_LDAP_BIND_PASSWORD=(str, 'admin'),
 )
 
-AUTH_LDAP_SERVER_URI = env('DD_LDAP_SERVER_URI')
-AUTH_LDAP_BIND_DN = env('DD_LDAP_BIND_DN')
-AUTH_LDAP_BIND_PASSWORD = env('DD_LDAP_BIND_PASSWORD')
-
-AUTH_LDAP_USER_SEARCH = LDAPSearch(
-    "ou=Engineers,dc=softwarefactory,dc=com",
-    ldap.SCOPE_SUBTREE,
-    "(uid=%(user)s)"
-)
-
-AUTH_LDAP_USER_ATTR_MAP = {
-    "first_name": "givenName",
-    "last_name": "sn",
-    "email": "mail",
-}
-
-# Group controls
-# # Set up the basic group parameters.
-# AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
-#     "dc=example,dc=com",
-#     ldap.SCOPE_SUBTREE,
-#     "(objectClass=groupOfNames)",
-# )
-# AUTH_LDAP_GROUP_TYPE = GroupOfNamesType(name_attr="cn")
-#
-# # Simple group restrictions
-# AUTH_LDAP_REQUIRE_GROUP = "cn=DD_USER_ACTIVE,ou=Groups,dc=example,dc=com"
-#
-# AUTH_LDAP_USER_FLAGS_BY_GROUP = {
-#     "is_active": "cn=DD_USER_ACTIVE,ou=Groups,dc=example,dc=com",
-#     "is_staff": "cn=DD_USER_STAFF,ou=Groups,dc=example,dc=com",
-#     "is_superuser": "cn=DD_USER_ADMIN,ou=Groups,dc=example,dc=com",
-# }
 
 def generate_url(scheme, double_slashes, user, password, host, port, path, params):
     result_list = []
@@ -540,24 +500,18 @@ LOGIN_REDIRECT_URL = env("DD_LOGIN_REDIRECT_URL")
 LOGIN_URL = env("DD_LOGIN_URL")
 
 # These are the individidual modules supported by social-auth
-# AUTHENTICATION_BACKENDS = (
-#     "social_core.backends.open_id_connect.OpenIdConnectAuth",
-#     "social_core.backends.auth0.Auth0OAuth2",
-#     "social_core.backends.google.GoogleOAuth2",
-#     "social_core.backends.okta.OktaOAuth2",
-#     "social_core.backends.azuread_tenant.AzureADTenantOAuth2",
-#     "social_core.backends.gitlab.GitLabOAuth2",
-#     "social_core.backends.keycloak.KeycloakOAuth2",
-#     "social_core.backends.github_enterprise.GithubEnterpriseOAuth2",
-#     "dojo.remote_user.RemoteUserBackend",
-#     "django.contrib.auth.backends.RemoteUserBackend",
-#     "django.contrib.auth.backends.ModelBackend",
-# )
-
 AUTHENTICATION_BACKENDS = (
-    'django_auth_ldap.backend.LDAPBackend',
-    'django.contrib.auth.backends.RemoteUserBackend',
-    'django.contrib.auth.backends.ModelBackend',
+    "social_core.backends.open_id_connect.OpenIdConnectAuth",
+    "social_core.backends.auth0.Auth0OAuth2",
+    "social_core.backends.google.GoogleOAuth2",
+    "social_core.backends.okta.OktaOAuth2",
+    "social_core.backends.azuread_tenant.AzureADTenantOAuth2",
+    "social_core.backends.gitlab.GitLabOAuth2",
+    "social_core.backends.keycloak.KeycloakOAuth2",
+    "social_core.backends.github_enterprise.GithubEnterpriseOAuth2",
+    "dojo.remote_user.RemoteUserBackend",
+    "django.contrib.auth.backends.RemoteUserBackend",
+    "django.contrib.auth.backends.ModelBackend",
 )
 
 # Make Argon2 the default password hasher by listing it first
@@ -607,10 +561,8 @@ SOCIAL_AUTH_USERNAME_IS_FULL_EMAIL = True
 GOOGLE_OAUTH_ENABLED = env("DD_SOCIAL_AUTH_GOOGLE_OAUTH2_ENABLED")
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env("DD_SOCIAL_AUTH_GOOGLE_OAUTH2_KEY")
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = env("DD_SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET")
-SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = tuple(
-    env.list("DD_SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS", default=[""]))
-SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_EMAILS = tuple(
-    env.list("DD_SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_EMAILS", default=[""]))
+SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = tuple(env.list("DD_SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS", default=[""]))
+SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_EMAILS = tuple(env.list("DD_SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_EMAILS", default=[""]))
 SOCIAL_AUTH_LOGIN_ERROR_URL = "/login"
 SOCIAL_AUTH_BACKEND_ERROR_URL = "/login"
 
@@ -698,10 +650,9 @@ DOCUMENTATION_URL = env("DD_DOCUMENTATION_URL")
 SLA_NOTIFY_ACTIVE = env("DD_SLA_NOTIFY_ACTIVE")  # this will include 'verified' findings as well as non-verified.
 SLA_NOTIFY_ACTIVE_VERIFIED_ONLY = env("DD_SLA_NOTIFY_ACTIVE_VERIFIED_ONLY")
 SLA_NOTIFY_WITH_JIRA_ONLY = env("DD_SLA_NOTIFY_WITH_JIRA_ONLY")  # Based on the 2 above, but only with a JIRA link
-SLA_NOTIFY_PRE_BREACH = env(
-    "DD_SLA_NOTIFY_PRE_BREACH")  # in days, notify between dayofbreach minus this number until dayofbreach
-SLA_NOTIFY_POST_BREACH = env(
-    "DD_SLA_NOTIFY_POST_BREACH")  # in days, skip notifications for findings that go past dayofbreach plus this number
+SLA_NOTIFY_PRE_BREACH = env("DD_SLA_NOTIFY_PRE_BREACH")  # in days, notify between dayofbreach minus this number until dayofbreach
+SLA_NOTIFY_POST_BREACH = env("DD_SLA_NOTIFY_POST_BREACH")  # in days, skip notifications for findings that go past dayofbreach plus this number
+
 
 SEARCH_MAX_RESULTS = env("DD_SEARCH_MAX_RESULTS")
 SIMILAR_FINDINGS_MAX_RESULTS = env("DD_SIMILAR_FINDINGS_MAX_RESULTS")
@@ -751,11 +702,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # https://django-ratelimit.readthedocs.io/en/stable/index.html
 RATE_LIMITER_ENABLED = env("DD_RATE_LIMITER_ENABLED")
-RATE_LIMITER_RATE = env(
-    "DD_RATE_LIMITER_RATE")  # Examples include 5/m 100/h and more https://django-ratelimit.readthedocs.io/en/stable/rates.html#simple-rates
+RATE_LIMITER_RATE = env("DD_RATE_LIMITER_RATE")  # Examples include 5/m 100/h and more https://django-ratelimit.readthedocs.io/en/stable/rates.html#simple-rates
 RATE_LIMITER_BLOCK = env("DD_RATE_LIMITER_BLOCK")  # Block the requests after rate limit is exceeded
-RATE_LIMITER_ACCOUNT_LOCKOUT = env(
-    "DD_RATE_LIMITER_ACCOUNT_LOCKOUT")  # Forces the user to change password on next login.
+RATE_LIMITER_ACCOUNT_LOCKOUT = env("DD_RATE_LIMITER_ACCOUNT_LOCKOUT")  # Forces the user to change password on next login.
 
 # ------------------------------------------------------------------------------
 # SECURITY DIRECTIVES
@@ -797,8 +746,7 @@ if env("DD_CSRF_TRUSTED_ORIGINS") != ["[]"]:
 
 # Unless set to None, the SecurityMiddleware sets the Cross-Origin Opener Policy
 # header on all responses that do not already have it to the value provided.
-SECURE_CROSS_ORIGIN_OPENER_POLICY = env("DD_SECURE_CROSS_ORIGIN_OPENER_POLICY") if env(
-    "DD_SECURE_CROSS_ORIGIN_OPENER_POLICY") != "None" else None
+SECURE_CROSS_ORIGIN_OPENER_POLICY = env("DD_SECURE_CROSS_ORIGIN_OPENER_POLICY") if env("DD_SECURE_CROSS_ORIGIN_OPENER_POLICY") != "None" else None
 
 if env("DD_SECURE_PROXY_SSL_HEADER"):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -827,6 +775,7 @@ FOOTER_VERSION = env("DD_FOOTER_VERSION")
 # Django-tagging settings
 FORCE_LOWERCASE_TAGS = env("DD_FORCE_LOWERCASE_TAGS")
 MAX_TAG_LENGTH = env("DD_MAX_TAG_LENGTH")
+
 
 # ------------------------------------------------------------------------------
 # ADMIN
@@ -985,7 +934,6 @@ EMAIL_CONFIG = env.email_url(
 
 vars().update(EMAIL_CONFIG)
 
-
 # ------------------------------------------------------------------------------
 # SAML
 # ------------------------------------------------------------------------------
@@ -1009,7 +957,6 @@ SAML2_LOGOUT_URL = env("DD_SAML2_LOGOUT_URL")
 if SAML2_ENABLED:
     import saml2
     import saml2.saml
-
     # SSO_URL = env('DD_SSO_URL')
     SAML_METADATA = {}
     if len(env("DD_SAML2_METADATA_AUTO_CONF_URL")) > 0:
@@ -1023,7 +970,7 @@ if SAML2_ENABLED:
     SAML_LOGOUT_REQUEST_PREFERRED_BINDING = saml2.BINDING_HTTP_POST
     SAML_IGNORE_LOGOUT_ERRORS = True
     SAML_DJANGO_USER_MAIN_ATTRIBUTE = "username"
-    #    SAML_DJANGO_USER_MAIN_ATTRIBUTE_LOOKUP = '__iexact'
+#    SAML_DJANGO_USER_MAIN_ATTRIBUTE_LOOKUP = '__iexact'
     SAML_USE_NAME_ID_AS_USERNAME = True
     SAML_CREATE_UNKNOWN_USER = env("DD_SAML2_CREATE_USER")
     SAML_ATTRIBUTE_MAPPING = saml2_attrib_map_format(env("DD_SAML2_ATTRIBUTES_MAP"))
@@ -1065,16 +1012,16 @@ if SAML2_ENABLED:
                     # do not change the binding or service name
                     "assertion_consumer_service": [
                         (f"{SITE_URL}/saml2/acs/",
-                         saml2.BINDING_HTTP_POST),
+                        saml2.BINDING_HTTP_POST),
                     ],
                     # url and binding to the single logout service view
                     # do not change the binding or service name
                     "single_logout_service": [
                         # Disable next two lines for HTTP_REDIRECT for IDP's that only support HTTP_POST. Ex. Okta:
                         (f"{SITE_URL}/saml2/ls/",
-                         saml2.BINDING_HTTP_REDIRECT),
+                        saml2.BINDING_HTTP_REDIRECT),
                         (f"{SITE_URL}/saml2/ls/post",
-                         saml2.BINDING_HTTP_POST),
+                        saml2.BINDING_HTTP_POST),
                     ],
                 },
 
@@ -1124,15 +1071,15 @@ if SAML2_ENABLED:
         # own metadata settings
         "contact_person": [
             {"given_name": "Lorenzo",
-             "sur_name": "Gil",
-             "company": "Yaco Sistemas",
-             "email_address": "lgs@yaco.es",
-             "contact_type": "technical"},
+            "sur_name": "Gil",
+            "company": "Yaco Sistemas",
+            "email_address": "lgs@yaco.es",
+            "contact_type": "technical"},
             {"given_name": "Angel",
-             "sur_name": "Fernandez",
-             "company": "Yaco Sistemas",
-             "email_address": "angel@yaco.es",
-             "contact_type": "administrative"},
+            "sur_name": "Fernandez",
+            "company": "Yaco Sistemas",
+            "email_address": "angel@yaco.es",
+            "contact_type": "administrative"},
         ],
         # you can set multilanguage information here
         "organization": {
@@ -1203,7 +1150,7 @@ CELERY_PASS_MODEL_BY_ID = env("DD_CELERY_PASS_MODEL_BY_ID")
 if len(env("DD_CELERY_BROKER_TRANSPORT_OPTIONS")) > 0:
     CELERY_BROKER_TRANSPORT_OPTIONS = json.loads(env("DD_CELERY_BROKER_TRANSPORT_OPTIONS"))
 
-CELERY_IMPORTS = ("dojo.tools.tool_issue_updater",)
+CELERY_IMPORTS = ("dojo.tools.tool_issue_updater", )
 
 # Celery beat scheduled tasks
 CELERY_BEAT_SCHEDULE = {
@@ -1275,11 +1222,12 @@ if env("DD_DJANGO_METRICS_ENABLED"):
         "django_prometheus.middleware.PrometheusBeforeMiddleware",
         *MIDDLEWARE,
         "django_prometheus.middleware.PrometheusAfterMiddleware",
-    ]
+]
     database_engine = DATABASES.get("default").get("ENGINE")
     DATABASES["default"]["ENGINE"] = database_engine.replace("django.", "django_prometheus.", 1)
     # CELERY_RESULT_BACKEND.replace('django.core','django_prometheus.', 1)
     LOGIN_EXEMPT_URLS += (rf"^{URL_PREFIX}django_metrics/",)
+
 
 # ------------------------------------
 # Hashcode configuration
@@ -1309,12 +1257,10 @@ HASHCODE_FIELDS_PER_SCANNER = {
     "Coverity Scan JSON Report": ["title", "cwe", "line", "file_path", "description"],
     "SonarQube Scan": ["cwe", "severity", "file_path"],
     "SonarQube API Import": ["title", "file_path", "line"],
-    "Sonatype Application Scan": ["title", "cwe", "file_path", "component_name", "component_version",
-                                  "vulnerability_ids"],
+    "Sonatype Application Scan": ["title", "cwe", "file_path", "component_name", "component_version", "vulnerability_ids"],
     "Dependency Check Scan": ["title", "cwe", "file_path"],
     "Dockle Scan": ["title", "description", "vuln_id_from_tool"],
-    "Dependency Track Finding Packaging Format (FPF) Export": ["component_name", "component_version",
-                                                               "vulnerability_ids"],
+    "Dependency Track Finding Packaging Format (FPF) Export": ["component_name", "component_version", "vulnerability_ids"],
     "Horusec Scan": ["title", "description", "file_path", "line"],
     "Mobsfscan Scan": ["title", "severity", "cwe", "file_path", "description"],
     "Tenable Scan": ["title", "severity", "vulnerability_ids", "cwe", "description"],
@@ -1340,13 +1286,11 @@ HASHCODE_FIELDS_PER_SCANNER = {
     "Trivy Scan": ["title", "severity", "vulnerability_ids", "cwe", "description"],
     "TFSec Scan": ["severity", "vuln_id_from_tool", "file_path", "line"],
     "Snyk Scan": ["vuln_id_from_tool", "file_path", "component_name", "component_version"],
-    "GitLab Dependency Scanning Report": ["title", "vulnerability_ids", "file_path", "component_name",
-                                          "component_version"],
+    "GitLab Dependency Scanning Report": ["title", "vulnerability_ids", "file_path", "component_name", "component_version"],
     "SpotBugs Scan": ["cwe", "severity", "file_path", "line"],
     "JFrog Xray Unified Scan": ["vulnerability_ids", "file_path", "component_name", "component_version"],
     "JFrog Xray On Demand Binary Scan": ["title", "component_name", "component_version"],
-    "Scout Suite Scan": ["file_path", "vuln_id_from_tool"],
-    # for now we use file_path as there is no attribute for "service"
+    "Scout Suite Scan": ["file_path", "vuln_id_from_tool"],  # for now we use file_path as there is no attribute for "service"
     "Meterian Scan": ["cwe", "component_name", "component_version", "description", "severity"],
     "Github Vulnerability Scan": ["title", "severity", "component_name", "vulnerability_ids", "file_path"],
     "Solar Appscreener Scan": ["title", "file_path", "line", "severity"],
@@ -1414,12 +1358,12 @@ if len(env("DD_HASHCODE_FIELDS_PER_SCANNER")) > 0:
             msg = f"Fields for hashcode calculation for {key} are not valid. It needs to be list of strings. Some of fields are not string."
             raise AttributeError(msg)
         if key in HASHCODE_FIELDS_PER_SCANNER:
-            logger.info(
-                f"Replacing {key} with value {value} (previously set to {HASHCODE_FIELDS_PER_SCANNER[key]}) from env var DD_HASHCODE_FIELDS_PER_SCANNER")
+            logger.info(f"Replacing {key} with value {value} (previously set to {HASHCODE_FIELDS_PER_SCANNER[key]}) from env var DD_HASHCODE_FIELDS_PER_SCANNER")
             HASHCODE_FIELDS_PER_SCANNER[key] = value
         if key not in HASHCODE_FIELDS_PER_SCANNER:
             logger.info(f"Adding {key} with value {value} from env var DD_HASHCODE_FIELDS_PER_SCANNER")
             HASHCODE_FIELDS_PER_SCANNER[key] = value
+
 
 # This tells if we should accept cwe=0 when computing hash_code with a configurable list of fields from HASHCODE_FIELDS_PER_SCANNER (this setting doesn't apply to legacy algorithm)
 # If False and cwe = 0, then the hash_code computation will fallback to legacy algorithm for the concerned finding
@@ -1477,9 +1421,7 @@ HASHCODE_ALLOWS_NULL_CWE = {
 # List of fields that are known to be usable in hash_code computation)
 # 'endpoints' is a pseudo field that uses the endpoints (for dynamic scanners)
 # 'unique_id_from_tool' is often not needed here as it can be used directly in the dedupe algorithm, but it's also possible to use it for hashing
-HASHCODE_ALLOWED_FIELDS = ["title", "cwe", "vulnerability_ids", "line", "file_path", "payload", "component_name",
-                           "component_version", "description", "endpoints", "unique_id_from_tool", "severity",
-                           "vuln_id_from_tool", "mitigation"]
+HASHCODE_ALLOWED_FIELDS = ["title", "cwe", "vulnerability_ids", "line", "file_path", "payload", "component_name", "component_version", "description", "endpoints", "unique_id_from_tool", "severity", "vuln_id_from_tool", "mitigation"]
 
 # Adding fields to the hash_code calculation regardless of the previous settings
 HASH_CODE_FIELDS_ALWAYS = ["service"]
@@ -1666,8 +1608,7 @@ if len(env("DD_DEDUPLICATION_ALGORITHM_PER_PARSER")) > 0:
             msg = f"DEDUP algorithm '{value}' for '{key}' is not valid. Use one of following values: {', '.join(DEDUPE_ALGOS)}"
             raise AttributeError(msg)
         if key in DEDUPLICATION_ALGORITHM_PER_PARSER:
-            logger.info(
-                f"Replacing {key} with value {value} (previously set to {DEDUPLICATION_ALGORITHM_PER_PARSER[key]}) from env var DD_DEDUPLICATION_ALGORITHM_PER_PARSER")
+            logger.info(f"Replacing {key} with value {value} (previously set to {DEDUPLICATION_ALGORITHM_PER_PARSER[key]}) from env var DD_DEDUPLICATION_ALGORITHM_PER_PARSER")
             DEDUPLICATION_ALGORITHM_PER_PARSER[key] = value
         if key not in DEDUPLICATION_ALGORITHM_PER_PARSER:
             logger.info(f"Adding {key} with value {value} from env var DD_DEDUPLICATION_ALGORITHM_PER_PARSER")
@@ -1832,8 +1773,7 @@ TAGULOUS_AUTOCOMPLETE_JS = (
 )
 
 # using 'element' for width should take width from css defined in template, but it doesn't. So set to 70% here.
-TAGULOUS_AUTOCOMPLETE_SETTINGS = {
-    "placeholder": "Enter some tags (comma separated, use enter to select / create a new tag)", "width": "70%"}
+TAGULOUS_AUTOCOMPLETE_SETTINGS = {"placeholder": "Enter some tags (comma separated, use enter to select / create a new tag)", "width": "70%"}
 
 EDITABLE_MITIGATED_DATA = env("DD_EDITABLE_MITIGATED_DATA")
 
@@ -1867,38 +1807,30 @@ SILENCED_SYSTEM_CHECKS = ["django_jsonfield_backport.W001"]
 VULNERABILITY_URLS = {
     "ALAS": "https://alas.aws.amazon.com/AL2/&&.html",  # e.g. https://alas.aws.amazon.com/alas2.html
     "ALBA-": "https://osv.dev/vulnerability/",  # e.g. https://osv.dev/vulnerability/ALBA-2019:3411
-    "ALINUX2-SA-": "https://mirrors.aliyun.com/alinux/cve/",
-    # e.g. https://mirrors.aliyun.com/alinux/cve/alinux2-sa-20250007.xml
+    "ALINUX2-SA-": "https://mirrors.aliyun.com/alinux/cve/",  # e.g. https://mirrors.aliyun.com/alinux/cve/alinux2-sa-20250007.xml
     "ALSA-": "https://osv.dev/vulnerability/",  # e.g. https://osv.dev/vulnerability/ALSA-2024:0827
     "ASA-": "https://security.archlinux.org/",  # e.g. https://security.archlinux.org/ASA-202003-8
     "AVD": "https://avd.aquasec.com/misconfig/",  # e.g. https://avd.aquasec.com/misconfig/avd-ksv-01010
     "BAM-": "https://jira.atlassian.com/browse/",  # e.g. https://jira.atlassian.com/browse/BAM-25498
     "BSERV-": "https://jira.atlassian.com/browse/",  # e.g. https://jira.atlassian.com/browse/BSERV-19020
     "C-": "https://hub.armosec.io/docs/",  # e.g. https://hub.armosec.io/docs/c-0085
-    "CISCO-SA-": "https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/",
-    # e.g. https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-umbrella-tunnel-gJw5thgE
-    "CAPEC": "https://capec.mitre.org/data/definitions/&&.html",
-    # e.g. https://capec.mitre.org/data/definitions/157.html
+    "CISCO-SA-": "https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/",  # e.g. https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-umbrella-tunnel-gJw5thgE
+    "CAPEC": "https://capec.mitre.org/data/definitions/&&.html",  # e.g. https://capec.mitre.org/data/definitions/157.html
     "CGA-": "https://images.chainguard.dev/security/",  # e.g. https://images.chainguard.dev/security/CGA-24pq-h5fw-43v3
     "CONFSERVER-": "https://jira.atlassian.com/browse/",  # e.g. https://jira.atlassian.com/browse/CONFSERVER-93361
     "CVE-": "https://nvd.nist.gov/vuln/detail/",  # e.g. https://nvd.nist.gov/vuln/detail/cve-2022-22965
     "CWE": "https://cwe.mitre.org/data/definitions/&&.html",  # e.g. https://cwe.mitre.org/data/definitions/79.html
-    "DLA-": "https://security-tracker.debian.org/tracker/",
-    # e.g. https://security-tracker.debian.org/tracker/DLA-3917-1
-    "DSA-": "https://security-tracker.debian.org/tracker/",
-    # e.g. https://security-tracker.debian.org/tracker/DSA-5791-1
-    "DTSA-": "https://security-tracker.debian.org/tracker/",
-    # e.g. https://security-tracker.debian.org/tracker/DTSA-41-1
+    "DLA-": "https://security-tracker.debian.org/tracker/",  # e.g. https://security-tracker.debian.org/tracker/DLA-3917-1
+    "DSA-": "https://security-tracker.debian.org/tracker/",  # e.g. https://security-tracker.debian.org/tracker/DSA-5791-1
+    "DTSA-": "https://security-tracker.debian.org/tracker/",  # e.g. https://security-tracker.debian.org/tracker/DTSA-41-1
     "ELBA-": "https://linux.oracle.com/errata/&&.html",  # e.g. https://linux.oracle.com/errata/ELBA-2024-7457.html
     "ELSA-": "https://linux.oracle.com/errata/&&.html",  # e.g. https://linux.oracle.com/errata/ELSA-2024-12714.html
-    "FEDORA-": "https://bodhi.fedoraproject.org/updates/",
-    # e.g. https://bodhi.fedoraproject.org/updates/FEDORA-EPEL-2024-06aa7dc422
+    "FEDORA-": "https://bodhi.fedoraproject.org/updates/",  # e.g. https://bodhi.fedoraproject.org/updates/FEDORA-EPEL-2024-06aa7dc422
     "FG-IR-": "https://www.fortiguard.com/psirt/",  # e.g. https://www.fortiguard.com/psirt/FG-IR-24-373
     "GHSA-": "https://github.com/advisories/",  # e.g. https://github.com/advisories/GHSA-58vj-cv5w-v4v6
     "GLSA": "https://security.gentoo.org/",  # e.g. https://security.gentoo.org/glsa/202409-32
     "JSDSERVER-": "https://jira.atlassian.com/browse/",  # e.g. https://jira.atlassian.com/browse/JSDSERVER-14872
-    "KB": "https://support.hcl-software.com/csm?id=kb_article&sysparm_article=",
-    # e.g. https://support.hcl-software.com/csm?id=kb_article&sysparm_article=KB0108401
+    "KB": "https://support.hcl-software.com/csm?id=kb_article&sysparm_article=",  # e.g. https://support.hcl-software.com/csm?id=kb_article&sysparm_article=KB0108401
     "KHV": "https://avd.aquasec.com/misconfig/kubernetes/",  # e.g. https://avd.aquasec.com/misconfig/kubernetes/khv045
     "MGAA-": "https://advisories.mageia.org/&&.html",  # e.g. https://advisories.mageia.org/MGAA-2013-0054.html
     "MGASA-": "https://advisories.mageia.org/&&.html",  # e.g. https://advisories.mageia.org/MGASA-2025-0023.html
@@ -1906,8 +1838,7 @@ VULNERABILITY_URLS = {
     "OPENSUSE-SU-": "https://osv.dev/vulnerability/",  # e.g. https://osv.dev/vulnerability/openSUSE-SU-2025:14898-1
     "OSV-": "https://osv.dev/vulnerability/",  # e.g. https://osv.dev/vulnerability/OSV-2024-1330
     "PAN-SA-": "https://security.paloaltonetworks.com/",  # e.g. https://security.paloaltonetworks.com/PAN-SA-2024-0010
-    "PFPT-SA-": "https://www.proofpoint.com/us/security/security-advisories/",
-    # e.g. https://www.proofpoint.com/us/security/security-advisories/pfpt-sa-0002
+    "PFPT-SA-": "https://www.proofpoint.com/us/security/security-advisories/",  # e.g. https://www.proofpoint.com/us/security/security-advisories/pfpt-sa-0002
     "PMASA-": "https://www.phpmyadmin.net/security/",  # e.g. https://www.phpmyadmin.net/security/PMASA-2025-1
     "PYSEC-": "https://osv.dev/vulnerability/",  # e.g. https://osv.dev/vulnerability/PYSEC-2024-48
     "RHBA-": "https://access.redhat.com/errata/",  # e.g. https://access.redhat.com/errata/RHBA-2024:2406
@@ -1921,11 +1852,9 @@ VULNERABILITY_URLS = {
     "SSA:": "https://vulners.com/slackware/",  # e.g. https://vulners.com/slackware/SSA-2024-157-01
     "SSA-": "https://vulners.com/slackware/",  # e.g. https://vulners.com/slackware/SSA-2025-074-01
     "SP-": "https://advisory.splunk.com/advisories/",  # e.g. https://advisory.splunk.com/advisories/SP-CAAANR7
-    "SUSE-SU-": "https://www.suse.com/support/update/announcement/",
-    # e.g. https://www.suse.com/support/update/announcement/2024/suse-su-20244196-1
+    "SUSE-SU-": "https://www.suse.com/support/update/announcement/",  # e.g. https://www.suse.com/support/update/announcement/2024/suse-su-20244196-1
     "SVD-": "https://advisory.splunk.com/advisories/",  # e.g. https://advisory.splunk.com/advisories/SVD-2025-0103
-    "TEMP-": "https://security-tracker.debian.org/tracker/",
-    # e.g. https://security-tracker.debian.org/tracker/TEMP-0841856-B18BAF
+    "TEMP-": "https://security-tracker.debian.org/tracker/",  # e.g. https://security-tracker.debian.org/tracker/TEMP-0841856-B18BAF
     "TYPO3-": "https://typo3.org/security/advisory/",  # e.g. https://typo3.org/security/advisory/typo3-core-sa-2025-010
     "USN-": "https://ubuntu.com/security/notices/",  # e.g. https://ubuntu.com/security/notices/USN-6642-1
     "VNS": "https://vulners.com/",
@@ -1970,6 +1899,7 @@ REQUESTS_TIMEOUT = env("DD_REQUESTS_TIMEOUT")
 # Reference issue: https://github.com/jazzband/django-polymorphic/issues/229
 warnings.filterwarnings("ignore", message="polymorphic.base.ManagerInheritanceWarning.*")
 warnings.filterwarnings("ignore", message="PolymorphicModelBase._default_manager.*")
+
 
 # The setting is here to avoid RemovedInDjango60Warning. It is here only for transition period.
 # TODO: - Remove this setting in Django 6.0
